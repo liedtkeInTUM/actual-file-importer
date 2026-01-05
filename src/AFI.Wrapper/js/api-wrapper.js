@@ -34,4 +34,4 @@ async function getCategories(connectionInfo) {
     return result;
 }
 
-module.exports = { addTransactions };
+module.exports = { addTransactions, getCategories };
