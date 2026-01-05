@@ -15,10 +15,11 @@ COPY --from=build-env /app/AFI/out .
 
 RUN apt-get update && \
     apt-get install curl gnupg -y
-RUN RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
-RUN apt-get install -y dumb-init nodejs npm && \
+RUN RUN curl -sL https://deb.nodesource.com/setup_22.x | bash - \
+    apt-get install -y dumb-init nodejs npm && \
     npm i @actual-app/api
-    
+RUN node -v
+RUN npm -v    
 
 # both of these are required
 ENV SERVER_URL=
