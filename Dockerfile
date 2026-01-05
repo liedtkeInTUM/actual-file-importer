@@ -14,13 +14,12 @@ WORKDIR /app
 COPY --from=build-env /app/AFI/out .
 
 RUN apt-get update && \
-    apt-get install curl gnupg -y
-RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
-RUN apt-get update && \
-    apt-get install -y dumb-init nodejs npm && \
-    npm i @actual-app/api
-RUN node -v
-RUN npm -v    
+    apt-get install curl gnupg -y && \
+    curl -sL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get update && \
+    apt-get install -y dumb-init nodejs && \
+    rm -rf /var/lib/apt/lists/*
+RUN npm i @actual-app/api
 
 # both of these are required
 ENV SERVER_URL=
