@@ -29,6 +29,7 @@ public static class Dependencies
         
         // Accounts.
         services.AddSingleton(new AccountsInfo(env.ImportBasePath));
+        services.AddSingleton(new CategoryMap(env.ImportBasePath));
         
         // Importer.
         services.AddSingleton<ImportProcessor>();

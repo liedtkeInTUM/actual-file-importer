@@ -12,7 +12,7 @@ public class AccountsInfo
     {
         Console.WriteLine($"Loading accounts from '{path}.'");
         var accounts = new Dictionary<string, AccountInfo>();
-        
+
         var directories = Directory.EnumerateDirectories(path);
         foreach (var directory in directories)
         {
@@ -50,11 +50,11 @@ public class AccountsInfo
         {
             throw new Exception("Account Id missing.");
         }
-        
+
         // Defaults.
         account.HeaderRows ??= 0;
         account.DateFormat ??= "yyyy-MM-dd";
         account.Delimiter ??= ",";
     }
-    
+
 }

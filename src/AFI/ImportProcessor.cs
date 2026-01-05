@@ -7,14 +7,18 @@ namespace AFI;
 internal class ImportProcessor : Processor
 {
     private IDictionary<string, AccountInfo> Accounts { get; }
+    private IDictionary<string, string> customCategoryMapping;
     private Actual Actual { get; }
-    
-    public ImportProcessor(AccountsInfo accounts, Actual actual)
+
+    private Dictionary<string, Category> actualCategories;
+
+    public ImportProcessor(AccountsInfo accounts, Actual actual, CategoryMap map)
     {
         Accounts = accounts.Accounts;
         Actual = actual;
+        customCategoryMapping = map.Categories;
     }
-    
+
     private EnumerationOptions CaseInsensitive { get; } = new() { MatchCasing = MatchCasing.CaseInsensitive };
 
     protected override void Process()
@@ -29,6 +33,12 @@ internal class ImportProcessor : Processor
     {
         try
         {
+            Category[] onlineCategories = Task.Run(async () => await Actual.GetCategories()).Result!;
+            foreach (var category in onlineCategories)
+            {
+                actualCategories.Add(category.Name, category);
+            }
+
             Console.WriteLine($"Checking account '{account.Account}' for files to import.");
             foreach (var file in Directory.EnumerateFiles(directory, "*.csv", CaseInsensitive))
             {
@@ -50,6 +60,7 @@ internal class ImportProcessor : Processor
             Console.WriteLine($"Processing file '{file}.'");
             var rows = File.ReadAllLines(file).Skip(account.HeaderRows!.Value);
             var transactions = new List<Transaction>();
+            int indexForSubtransactions = 0;
             foreach (var row in rows)
             {
                 var fields = row.Split(account.Delimiter);
@@ -57,11 +68,19 @@ internal class ImportProcessor : Processor
 
                 if (account.DateColumn.HasValue)
                 {
-                    transaction.Date = DateTime.ParseExact(
-                        fields[account.DateColumn!.Value],
-                        account.DateFormat!,
-                        CultureInfo.InvariantCulture
-                    );
+                    try
+                    {
+                        transaction.Date = DateTime.ParseExact(
+                            fields[account.DateColumn!.Value],
+                            account.DateFormat!,
+                            CultureInfo.InvariantCulture
+                        );
+                    }
+                    catch
+                    {
+                        // assume we have just parsed a subtransaction
+                        continue;
+                    }
                 }
 
                 if (account.PayeeColumn.HasValue)
@@ -76,7 +95,60 @@ internal class ImportProcessor : Processor
                     );
                 }
 
+                if (account.CategoryColumn.HasValue)
+                {
+                    if (fields[account.CategoryColumn!.Value].Contains("--Splittbuchung--")) // german lexware finanzmanager extension
+                    {
+                        var subTransactions = new List<Transaction[]>();
+                        var subtransactionfields = rows.ElementAt(indexForSubtransactions + 1).Split(account.Delimiter);
+                        while (subtransactionfields[account.DateColumn!.Value].Count() == 0)
+                        {
+                            Transaction[] subtransaction = new Transaction[1];
+                            subtransaction[0] = new Transaction();
+                            subtransaction[0].Date = transaction.Date;
+                            subtransaction[0].PayeeName = transaction.PayeeName;
+                            subtransaction[0].AmountInCents = Convert.ToInt32(
+                                decimal.Parse(subtransactionfields[account.AmountColumn!.Value]) * 100
+                            );
+                            if (account.CategoryColumn.HasValue)
+                            {
+                                subtransaction[0].Category = ConvertCategoryToGUID(subtransactionfields[account.CategoryColumn!.Value]);
+                            }
+
+                            if (account.TagColumn.HasValue)
+                            {
+                                if (!fields[account.TagColumn!.Value].Contains("--Splittbuchung--")) // german lexware finanzmanager extension
+                                {
+                                    subtransaction[0].Notes = subtransactionfields[account.TagColumn!.Value];
+                                }
+                            }
+
+                            subTransactions.Add(subtransaction);
+
+                            // check next element
+                            indexForSubtransactions++;
+                            subtransactionfields = rows.ElementAt(indexForSubtransactions + 1).Split(account.Delimiter);
+                        }
+
+                        transaction.SubTransactions = subTransactions.ToArray();
+
+                    }
+                    else
+                    {
+                        transaction.Category = ConvertCategoryToGUID(fields[account.CategoryColumn!.Value]);
+                    }
+                }
+
+                if (account.TagColumn.HasValue)
+                {
+                    if (!fields[account.TagColumn!.Value].Contains("--Splittbuchung--")) // german lexware finanzmanager extension
+                    {
+                        transaction.Notes = fields[account.TagColumn!.Value];
+                    }
+                }
+
                 transactions.Add(transaction);
+                indexForSubtransactions++;
             }
 
             Actual.AddTransactions(account.Account!.Value, transactions).GetAwaiter().GetResult();
@@ -86,5 +158,21 @@ internal class ImportProcessor : Processor
         {
             Console.WriteLine(ex);
         }
+    }
+
+
+    private Guid? ConvertCategoryToGUID(string v)
+    {
+        Category match;
+        string mappedCat;
+        if (!customCategoryMapping.TryGetValue(v, out mappedCat))
+        {
+            mappedCat = customCategoryMapping["default"];
+        }
+        if (actualCategories.TryGetValue(mappedCat, out match))
+        {
+            return match.Id;
+        }
+        return null;
     }
 }

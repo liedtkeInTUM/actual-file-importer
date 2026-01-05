@@ -16,4 +16,22 @@ async function addTransactions(connectionInfo, accountId, transactions) {
   await api.shutdown();
 }
 
+async function getCategories(connectionInfo) {
+    // Connect and sync up.
+    await api.init({ serverURL: connectionInfo.serverUrl, password: connectionInfo.serverPassword });
+    await api.downloadBudget(connectionInfo.budgetSyncId);
+
+    // Add the new transactions.
+    let result = await api.getCategories();
+
+    // Sync the new transactions to the server.
+    // Temporary until api.shutdown() syncs, which will be with the next @actual-app/api release.
+    await api.internal.send('sync');
+
+    // All done.
+    await api.shutdown();
+
+    return result;
+}
+
 module.exports = { addTransactions };

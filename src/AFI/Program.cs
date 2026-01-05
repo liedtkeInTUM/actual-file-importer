@@ -10,7 +10,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
 // Check for files every five minutes.
 var importer = host.Services.BuildProcessor<ImportProcessor>(
 #if DEBUG
-    TimeSpan.FromMinutes(1)
+    TimeSpan.FromSeconds(15)
 #else
     TimeSpan.FromMinutes(5)
 #endif

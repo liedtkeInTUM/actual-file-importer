@@ -4,9 +4,9 @@ namespace AFI.Wrapper;
 
 public class Actual
 {
-    
+
     #region " Constructor, Private Properties "
-    
+
     private INodeJSService Node { get; }
     private ConnectionInfo ConnectionInfo { get; }
 
@@ -15,21 +15,26 @@ public class Actual
         Node = node;
         ConnectionInfo = connectionInfo;
     }
-    
+
     #endregion
 
     public async Task AddTransactions(Guid accountId, IEnumerable<Transaction> transactions)
     {
         await Invoke("addTransactions", new object[] { accountId, transactions });
     }
+    public async Task<Category[]?> GetCategories()
+    {
+        return await Invoke<Category[]>("getCategories");
+    }
+
 
     #region " Invoke "
-    
+
     private async Task Invoke(string method, object? arg = null)
     {
         await Invoke(method, new[] { arg });
     }
-    
+
     private async Task Invoke(string method, object?[]? args)
     {
         await Node.InvokeFromFileAsync("api-wrapper.js", method, Args(args));
@@ -55,7 +60,7 @@ public class Actual
 
         return joined;
     }
-    
+
     #endregion
-    
+
 }

@@ -10,7 +10,9 @@ public class AccountInfo
     public ushort? DateColumn { get; set; }
     public ushort? PayeeColumn { get; set; }
     public ushort? AmountColumn { get; set; }
-    
+    public ushort? CategoryColumn { get; set; }
+    public ushort? TagColumn { get; set; }
+
     // Valued by default.
     public ushort? HeaderRows { get; set; }
     public string? DateFormat { get; set; }
