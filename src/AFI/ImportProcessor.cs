@@ -33,7 +33,9 @@ internal class ImportProcessor : Processor
     {
         try
         {
+            Console.WriteLine($"Checking online categories for assigning transactions."); 
             Category[] onlineCategories = Task.Run(async () => await Actual.GetCategories()).Result!;
+            Console.WriteLine($"Found categories: '{onlineCategories.ToString()}'.");
             foreach (var category in onlineCategories)
             {
                 actualCategories.Add(category.Name, category);
